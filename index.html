@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت حرفه ای - آفلاین</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="chartTooltip" class="chart-tooltip"></div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="profile-section">
+                <img src="images/me.webp" alt="Profile" class="profile-img">
+                <h3>رمینت </h3>
+            </div>
+            
+            <nav>
+                <ul>
+                    <li class="active" onclick="switchTab('dashboard')">داشبورد</li>
+                    <li onclick="switchTab('companies')">مدیریت شرکت‌ها</li>
+                    <li onclick="switchTab('sales')">مدیریت فروش</li>
+                    <li onclick="switchTab('products')">مدیریت محصولات</li>
+                    <li onclick="openExportModal()" style="background: var(--secondary-color); color: #fff; margin-top: 15px;">📥 خروجی CSV</li>
+                    
+                    <!-- دکمه های بکاپ و بازیابی اضافه شدند -->
+                    <li onclick="exportBackup()" style="background: #2b5876; color: #fff; margin-top: 5px;">💾 دانلود بکاپ (JSON)</li>
+                    <li onclick="document.getElementById('importFile').click()" style="background: #e67e22; color: #fff; margin-top: 5px;">📂 بازیابی بکاپ</li>
+                </ul>
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importBackup(event)">
+            </nav>
+            
+            <div class="settings-section">
+                <label class="theme-switch">
+                    <span>حالت تاریک</span>
+                    <input type="checkbox" id="themeToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content-area">
+            
+            <!-- Dashboard Tab -->
+            <section id="dashboard" class="tab-content">
+                <header>
+                    <h2>خلاصه وضعیت | RAMINETCV.IR</h2>
+                </header>
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <h3>تعداد شرکت‌ها</h3>
+                        <p id="totalCompanies">0</p>
+                    </div>
+                    <div class="stat-card glass">
+                        <h3>کل فروش ثبت شده</h3>
+                        <p id="totalSales">0 تومان</p>
+                    </div>
+                    <div class="stat-card glass">
+                        <h3>تعداد محصولات</h3>
+                        <p id="totalProducts">0</p>
+                    </div>
+                </div>
+
+                <div class="chart-container glass mt-4" style="position: relative; width: 100%;">
+                    <div class="chart-header">
+                        <h3>نمودار فروش ماهانه</h3>
+                        <div class="year-filter-container">
+                            <label for="chartYearFilter">انتخاب سال:</label>
+                            <select id="chartYearFilter" class="form-control" onchange="drawChart()"></select>
+                        </div>
+                    </div>
+                    <canvas id="dashboardChart"></canvas>
+                </div>
+
+                <!-- Notes Section -->
+                <div class="notes-container glass mt-4" style="padding: 20px;">
+                    <h3 id="notesTitle">یادداشت‌های سریع</h3>
+                    <div id="note-form-container" class="d-flex mt-4" style="gap: 10px; flex-wrap: wrap;">
+                        <input type="text" id="noteInput" class="form-control" placeholder="یادداشت جدید را بنویسید..." style="flex-grow: 1;">
+                        <div id="note-buttons">
+                            <button class="btn btn-primary" onclick="saveNote()">افزودن یادداشت</button>
+                        </div>
+                    </div>
+                    <div id="notesList" class="mt-4" style="max-height: 200px; overflow-y: auto;"></div>
+                </div>
+            </section>
+
+            <!-- Companies Tab -->
+            <section id="companies" class="tab-content hidden">
+                <header class="d-flex justify-content-between align-items-center" style="flex-wrap: wrap; gap: 10px;">
+                    <h2>مدیریت شرکت‌ها</h2>
+                    <input type="text" id="searchCompany" class="form-control" placeholder="جستجوی شرکت..." style="max-width: 250px;" oninput="updateUI()">
+                    <button class="btn btn-primary" onclick="openModal('companyModal')">افزودن شرکت جدید</button>
+                </header>
+                <div class="list-container glass mt-4" id="companyList"></div>
+            </section>
+
+            <!-- Sales Tab -->
+            <section id="sales" class="tab-content hidden">
+                <header class="d-flex justify-content-between align-items-center" style="flex-wrap: wrap; gap: 10px;">
+                    <h2>مدیریت فروش</h2>
+                    <div class="d-flex gap-2" style="flex-grow: 1; max-width: 500px; flex-wrap: wrap;">
+                        <input type="text" id="searchSale" class="form-control" placeholder="جستجو در توضیحات..." oninput="updateUI()" style="flex: 1; min-width: 150px;">
+                        <select id="filterSaleCompany" class="form-control" onchange="updateUI()" style="flex: 1; min-width: 150px;">
+                            <option value="all">همه شرکت‌ها</option>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" onclick="openModal('saleModal')">ثبت فروش جدید</button>
+                    </div>
+                </header>
+                <div class="list-container glass mt-4" id="saleList"></div>
+            </section>
+
+            <!-- Products Tab -->
+            <section id="products" class="tab-content hidden">
+                <header class="d-flex justify-content-between align-items-center" style="flex-wrap: wrap; gap: 10px;">
+                    <h2>مدیریت محصولات</h2>
+                    <div class="d-flex gap-2" style="flex-grow: 1; max-width: 500px; flex-wrap: wrap;">
+                        <input type="text" id="searchProduct" class="form-control" placeholder="جستجوی محصول..." style="max-width: 250px;" oninput="updateUI()">
+                        <select id="filterProductCompany" class="form-control" onchange="updateUI()" style="flex: 1; min-width: 150px;">
+                            <option value="all">همه شرکت‌ها</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('productModal')">افزودن محصول جدید</button>
+                </header>
+                <div class="products-grid mt-4" id="productList"></div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Company Modal -->
+    <div id="companyModal" class="modal">
+        <div class="modal-content glass">
+            <h2 id="companyModalTitle">افزودن شرکت</h2>
+            <input type="hidden" id="companyEditId">
+            <div class="form-group">
+                <label>نام شرکت:</label>
+                <input type="text" id="companyName" class="form-control">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="saveCompany()">ذخیره</button>
+                <button class="btn btn-warning" onclick="closeModal('companyModal')">انصراف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sale Modal -->
+    <div id="saleModal" class="modal">
+        <div class="modal-content glass">
+            <h2 id="saleModalTitle">ثبت فروش</h2>
+            <input type="hidden" id="saleEditId">
+            <div class="form-group">
+                <label>انتخاب شرکت:</label>
+                <select id="saleCompany" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label>سال فروش (شمسی):</label>
+                <input type="number" id="saleYear" class="form-control" placeholder="مثلا 1403">
+            </div>
+            <div class="form-group">
+                <label>ماه فروش:</label>
+                <select id="saleMonth" class="form-control">
+                    <option value="0">فروردین</option>
+                    <option value="1">اردیبهشت</option>
+                    <option value="2">خرداد</option>
+                    <option value="3">تیر</option>
+                    <option value="4">مرداد</option>
+                    <option value="5">شهریور</option>
+                    <option value="6">مهر</option>
+                    <option value="7">آبان</option>
+                    <option value="8">آذر</option>
+                    <option value="9">دی</option>
+                    <option value="10">بهمن</option>
+                    <option value="11">اسفند</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>مبلغ فروش (تومان):</label>
+                <input type="number" id="saleAmount" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>توضیحات (اختیاری):</label>
+                <textarea id="saleDescription" class="form-control" rows="2" style="resize: vertical;"></textarea>
+            </div>
+            <div class="modal-actions mt-4">
+                <button class="btn btn-primary" onclick="saveSale()">ذخیره</button>
+                <button class="btn btn-warning" onclick="closeModal('saleModal')">انصراف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content glass" style="max-width: 500px;">
+            <h2 id="productModalTitle">افزودن محصول</h2>
+            <input type="hidden" id="productEditId">
+            <div class="form-group">
+                <label>انتخاب شرکت:</label>
+                <select id="productCompany" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label>نام محصول:</label>
+                <input type="text" id="productName" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>قیمت اصلی (تومان):</label>
+                <input type="number" id="productPrice" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>مقدار تخفیف (تومان - اختیاری):</label>
+                <input type="number" id="productDiscount" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>موجودی:</label>
+                <input type="number" id="productStock" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>تصویر محصول:</label>
+                <input type="file" id="productImage" class="form-control" accept="image/*">
+                <img id="product-image-preview" src="" alt="پیش نمایش" style="display: none; max-width: 100px; margin-top: 10px; border-radius: 8px;">
+            </div>
+            <div class="modal-actions mt-4">
+                <button class="btn btn-primary" onclick="saveProduct()">ذخیره محصول</button>
+                <button class="btn btn-warning" onclick="closeModal('productModal')">انصراف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export CSV Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content glass" style="max-width: 400px;">
+            <h2>تنظیمات خروجی CSV</h2>
+            
+            <div class="form-group">
+                <label>نوع اطلاعات:</label>
+                <select id="exportDataType" class="form-control" onchange="toggleExportCompany()">
+                    <option value="sales">لیست فروش‌ها</option>
+                    <option value="products">لیست محصولات</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="exportCompanyGroup">
+                <label>انتخاب شرکت:</label>
+                <select id="exportCompany" class="form-control">
+                    <!-- پر شدن خودکار توسط جاوااسکریپت -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>نام فایل خروجی:</label>
+                <input type="text" id="exportFileName" class="form-control" placeholder="مثال: my_data_export">
+            </div>
+
+            <div class="modal-actions mt-4">
+                <button class="btn btn-primary" onclick="executeExport()">دانلود فایل</button>
+                <button class="btn btn-warning" onclick="closeModal('exportModal')">انصراف</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
